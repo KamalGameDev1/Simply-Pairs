@@ -108,6 +108,7 @@ namespace SimplyPairs
             IsFlipped = false;
             transform.localScale = Vector3.one;
             isAnimating = false;
+
         }
 
         public void SetMatched()
@@ -142,6 +143,7 @@ namespace SimplyPairs
             transform.localScale = original;
             yield return new WaitForEndOfFrame();
             transform.gameObject.SetActive(false);
+            
         }
     }
 }

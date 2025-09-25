@@ -15,16 +15,16 @@ namespace SimplyPairs
         public List<CardScript> _allCards = new List<CardScript>();
 
         private Queue<CardScript> flipQueue = new Queue<CardScript>();
-
         private Coroutine processCoroutine;
 
         [Header("Mismatch Settings")]
-        public float mismatchDelay = 0.5f; // set to 0 for instant flip back
+        public float mismatchDelay = 0.5f; // delay before flip back
 
         private void Awake()
         {
             instance = this;
         }
+
         void Start()
         {
             foreach (var card in _allCards)
@@ -33,7 +33,7 @@ namespace SimplyPairs
             }
         }
 
-        #region CardHandlerSpace
+        #region Card Handler
         public void HandleCardFlipped(CardScript card)
         {
             Debug.Log("card:" + card.name);
@@ -43,6 +43,10 @@ namespace SimplyPairs
             if (flipQueue.Contains(card)) return;
 
             flipQueue.Enqueue(card);
+
+            // Add turn every time player flips 2 cards
+            if (flipQueue.Count % 2 == 0)
+                ScoreManager.instance?.AddTurn();
 
             if (processCoroutine == null)
                 processCoroutine = StartCoroutine(ProcessQueue());
@@ -72,20 +76,27 @@ namespace SimplyPairs
                 card1.SetMatched();
                 card2.SetMatched();
 
+                //Scoring for match
+                ScoreManager.instance?.OnMatch();
+
+                // Check win condition
                 if (_allCards.TrueForAll(c => c.IsMatched))
                 {
                     Debug.Log("All matched — You Win!");
+                    ScoreManager.instance.winText.text = "All matched — You Win";
+                    //AudioManager.Instance?.PlayGameOver();
                 }
             }
             else
             {
-                Debug.Log($" Mismatched: {card1.id} vs {card2.id}");
+                Debug.Log($"Mismatched: {card1.id} vs {card2.id}");
 
-                // optional short pause so player sees both cards
+                // Penalty for mismatch
+                ScoreManager.instance?.OnMismatch();
+
                 if (mismatchDelay > 0f)
                     yield return new WaitForSeconds(mismatchDelay);
 
-                // flip both back simultaneously
                 Coroutine flip1 = StartCoroutine(card1.FlipBack());
                 Coroutine flip2 = StartCoroutine(card2.FlipBack());
 
@@ -99,6 +110,5 @@ namespace SimplyPairs
         {
             Application.Quit();
         }
-
     }
 }
