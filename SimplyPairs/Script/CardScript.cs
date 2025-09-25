@@ -9,19 +9,20 @@ namespace SimplyPairs
     public class CardScript : MonoBehaviour, IPointerClickHandler
     {
         [Header("Card Data")]
-        public int id;
-        public Image backSprite;   // back side of card
-        public Image iconSprite;   // front (face) side of card
+        public string id;
+        public Image backSprite;   
+        public Image iconSprite;   
 
-        [Header("Flip Settings")]
+        [Header("Flip Data")]
         public float flipDuration = 0.25f;
+        public float flipBackDuration = 0.15f; 
 
-        [Header("Boolean")]
+        [Header("BoolState")]
         public bool IsFlipped;
         public bool IsMatched;
 
-        
-        public event Action<CardScript> OnCardFlipped; // notify GameManager
+        private bool isAnimating;
+        public event Action<CardScript> OnCardFlipped;
 
         void Awake()
         {
@@ -32,77 +33,113 @@ namespace SimplyPairs
         {
             IsFlipped = false;
             IsMatched = false;
+            isAnimating = false;
             backSprite.gameObject.SetActive(true);
             iconSprite.gameObject.SetActive(false);
             transform.localScale = Vector3.one;
         }
 
-        // Required interface
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (IsMatched || IsFlipped) return;
+            if (IsMatched || IsFlipped || isAnimating) return;
 
             StartCoroutine(FlipToFace());
-            OnCardFlipped?.Invoke(this); // notify manager
         }
 
         private IEnumerator FlipToFace()
         {
+            isAnimating = true;
             IsFlipped = true;
 
             float half = flipDuration / 2f;
 
             // scale down
-            for (float t = 0; t < half; t += Time.deltaTime)
+            for (float t = 0f; t < half; t += Time.deltaTime)
             {
-                float scale = Mathf.Lerp(1f, 0f, t / half);
-                transform.localScale = new Vector3(scale, 1f, 1f);
+                float f = Mathf.SmoothStep(1f, 0f, t / half);
+                transform.localScale = new Vector3(f, 1f, 1f);
                 yield return null;
             }
 
-            // set images
             backSprite.gameObject.SetActive(false);
             iconSprite.gameObject.SetActive(true);
 
             // scale up
-            for (float t = 0; t < half; t += Time.deltaTime)
+            for (float t = 0f; t < half; t += Time.deltaTime)
             {
-                float scale = Mathf.Lerp(0f, 1f, t / half);
-                transform.localScale = new Vector3(scale, 1f, 1f);
+                float f = Mathf.SmoothStep(0f, 1f, t / half);
+                transform.localScale = new Vector3(f, 1f, 1f);
                 yield return null;
             }
+
+            transform.localScale = Vector3.one;
+            isAnimating = false;
+
+            //notify AFTER flip is complete
+            OnCardFlipped?.Invoke(this);
         }
 
         public IEnumerator FlipBack()
         {
-            float half = flipDuration / 2f;
+            if (isAnimating) yield break; 
+            isAnimating = true;
+
+            float half = flipBackDuration / 2f;
 
             // scale down
-            for (float t = 0; t < half; t += Time.deltaTime)
+            for (float t = 0f; t < half; t += Time.deltaTime)
             {
-                float scale = Mathf.Lerp(1f, 0f, t / half);
-                transform.localScale = new Vector3(scale, 1f, 1f);
+                float f = Mathf.SmoothStep(1f, 0f, t / half);
+                transform.localScale = new Vector3(f, 1f, 1f);
                 yield return null;
             }
 
-            // set back image
             backSprite.gameObject.SetActive(true);
             iconSprite.gameObject.SetActive(false);
 
             // scale up
-            for (float t = 0; t < half; t += Time.deltaTime)
+            for (float t = 0f; t < half; t += Time.deltaTime)
             {
-                float scale = Mathf.Lerp(0f, 1f, t / half);
-                transform.localScale = new Vector3(scale, 1f, 1f);
+                float f = Mathf.SmoothStep(0f, 1f, t / half);
+                transform.localScale = new Vector3(f, 1f, 1f);
                 yield return null;
             }
 
             IsFlipped = false;
+            transform.localScale = Vector3.one;
+            isAnimating = false;
         }
 
         public void SetMatched()
         {
             IsMatched = true;
+            StartCoroutine(MatchAnimation());
+        }
+
+        private IEnumerator MatchAnimation()
+        {
+            Vector3 original = transform.localScale;
+            Vector3 enlarged = original * 1.15f;
+
+            float dur = 0.12f;
+            float t = 0f;
+
+            while (t < dur)
+            {
+                transform.localScale = Vector3.Lerp(original, enlarged, t / dur);
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            t = 0f;
+            while (t < dur)
+            {
+                transform.localScale = Vector3.Lerp(enlarged, original, t / dur);
+                t += Time.deltaTime;
+                yield return null;
+            }
+
+            transform.localScale = original;
         }
     }
 }
