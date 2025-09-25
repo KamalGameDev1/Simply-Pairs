@@ -6,15 +6,25 @@ namespace SimplyPairs
 {
     public class GameManager : MonoBehaviour
     {
+        public static GameManager instance;
+
+        [Header("Cards Sprites")]
+        public List<Sprite> _allCardsSprite = new List<Sprite>();
+
         [Header("Cards in Scene")]
         public List<CardScript> _allCards = new List<CardScript>();
 
         private Queue<CardScript> flipQueue = new Queue<CardScript>();
+
         private Coroutine processCoroutine;
 
         [Header("Mismatch Settings")]
         public float mismatchDelay = 0.5f; // set to 0 for instant flip back
 
+        private void Awake()
+        {
+            instance = this;
+        }
         void Start()
         {
             foreach (var card in _allCards)
@@ -23,8 +33,11 @@ namespace SimplyPairs
             }
         }
 
-        private void HandleCardFlipped(CardScript card)
+        #region CardHandlerSpace
+        public void HandleCardFlipped(CardScript card)
         {
+            Debug.Log("card:" + card.name);
+
             if (card == null) return;
             if (card.IsMatched) return;
             if (flipQueue.Contains(card)) return;
@@ -80,5 +93,12 @@ namespace SimplyPairs
                 yield return flip2;
             }
         }
+        #endregion
+
+        public void ExitApplication()
+        {
+            Application.Quit();
+        }
+
     }
 }
