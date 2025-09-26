@@ -67,7 +67,7 @@ namespace SimplyPairs
             UpdateUI();
             FlashText(comboText, Color.green);
 
-            
+            SoundManager.instance.PlayMatch();
         }
 
         // Called on mismatch

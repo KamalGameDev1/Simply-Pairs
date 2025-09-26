@@ -77,14 +77,15 @@ namespace SimplyPairs
                 card2.SetMatched();
 
                 //Scoring for match
-                ScoreManager.instance?.OnMatch();
+                ScoreManager.instance.OnMatch();
+               
 
                 // Check win condition
                 if (_allCards.TrueForAll(c => c.IsMatched))
                 {
-                    Debug.Log("All matched — You Win!");
-                    ScoreManager.instance.winText.text = "All matched — You Win";
-                    //AudioManager.Instance?.PlayGameOver();
+                    Debug.Log("All matched ~ You Win!");
+                    ScoreManager.instance.winText.text = "All matched ~ You Win";
+                    SoundManager.instance.PlayGameOver();
                 }
             }
             else
@@ -92,7 +93,8 @@ namespace SimplyPairs
                 Debug.Log($"Mismatched: {card1.id} vs {card2.id}");
 
                 // Penalty for mismatch
-                ScoreManager.instance?.OnMismatch();
+                ScoreManager.instance.OnMismatch();
+                SoundManager.instance.PlayMismatch();
 
                 if (mismatchDelay > 0f)
                     yield return new WaitForSeconds(mismatchDelay);

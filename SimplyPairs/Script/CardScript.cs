@@ -77,6 +77,7 @@ namespace SimplyPairs
 
             //notify AFTER flip is complete
             OnCardFlipped?.Invoke(this);
+            SoundManager.instance.PlayFlip();
         }
 
         public IEnumerator FlipBack()
@@ -108,6 +109,7 @@ namespace SimplyPairs
             IsFlipped = false;
             transform.localScale = Vector3.one;
             isAnimating = false;
+            SoundManager.instance.PlayFlip();
 
         }
 

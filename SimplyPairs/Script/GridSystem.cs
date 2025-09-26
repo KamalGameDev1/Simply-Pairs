@@ -158,8 +158,8 @@ namespace SimplyPairs
                         card.name = changesprites[index].name;
                         card.iconSprite.sprite = changesprites[index];
                         GameManager.instance._allCards.Add(card);
-
-                        // **Subscribe to the event here**
+                        //SoundManager.instance.PlayPlace();
+                        // Subscribe to the event here
                         card.OnCardFlipped += GameManager.instance.HandleCardFlipped;
                         index++;
 
