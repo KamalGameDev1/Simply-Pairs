@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-
 namespace SimplyPairs
 {
     public class GridSystem : MonoBehaviour
     {
         [Header("Custom Grid Settings")]
         [SerializeField] InputField columnsInput;
-        [SerializeField] InputField rowsinput;
+        [SerializeField] InputField rowsInput;
         [SerializeField] Text errorText;
         [SerializeField] GameObject customInputPanel;
-        [SerializeField] GameObject Levelspanel;
+        [SerializeField] GameObject levelsPanel;
+        [SerializeField] GameObject gamePlayPanel;
         [SerializeField] Vector2 spacing = new Vector2(5, 5);
 
         [Header("References")]
@@ -29,30 +29,45 @@ namespace SimplyPairs
         [Header("Animation")]
         [SerializeField] float animDuration = 0.15f;
 
+        private int rows, columns;
+
         private void Start()
         {
-            if (easyButton != null)
-                easyButton.onClick.AddListener(EasyLevel);
-            if (difficultButton != null)
-                difficultButton.onClick.AddListener(DifficultLevel);
-            if (hardButton != null)
-                hardButton.onClick.AddListener(HardLevel);
-            if (customButton != null)
-                customButton.onClick.AddListener(CustomLevel);
+            if (easyButton != null) easyButton.onClick.AddListener(EasyLevel);
+            if (difficultButton != null) difficultButton.onClick.AddListener(DifficultLevel);
+            if (hardButton != null) hardButton.onClick.AddListener(HardLevel);
+            if (customButton != null) customButton.onClick.AddListener(CustomLevel);
+
+            // Load last played level if available
+            var (savedRows, savedCols) = SaveLoadManager.instance.LoadLastLevel();
+            if (savedRows > 0 && savedCols > 0)
+            {
+                rows = savedRows;
+                columns = savedCols;
+                GenerateGrid();
+            }
+            else
+            {
+                // show menu instead of auto-generate
+                levelsPanel.SetActive(true);
+            }
+
         }
-        int rows, columns;
+
         void EasyLevel()
         {
             rows = 2;
             columns = 6;
             GenerateGrid();
         }
+
         void DifficultLevel()
         {
             rows = 5;
             columns = 6;
             GenerateGrid();
         }
+
         void HardLevel()
         {
             rows = 5;
@@ -60,20 +75,18 @@ namespace SimplyPairs
             GenerateGrid();
         }
 
-
         void CustomLevel()
         {
-            if (rowsinput.text != "" && columnsInput.text != "")
+            if (int.TryParse(rowsInput.text, out int row) &&
+                int.TryParse(columnsInput.text, out int column))
             {
-                int row = int.Parse(rowsinput.text);
-                int column = int.Parse(columnsInput.text);
                 rows = row;
                 columns = column;
                 GenerateGrid();
             }
             else
             {
-                errorText.text = "Enter valid Input";
+                errorText.text = "Enter valid numbers for rows and columns.";
             }
         }
 
@@ -84,107 +97,114 @@ namespace SimplyPairs
 
         void GenerateGrid()
         {
-            Levelspanel.SetActive(false);
+            levelsPanel.SetActive(false);
+            gamePlayPanel.SetActive(true);
 
-            // Clear previous children
+            GameManager.instance._allCards.Clear();
+
+          
+            ScoreManager.instance?.ResetScore();
+
+           
+            SaveLoadManager.instance?.SaveLastLevel(rows, columns);
+
+            // Destroy old children
             foreach (Transform child in container)
+            {
+                CardScript card = child.GetComponent<CardScript>();
+                if (card != null)
+                    card.OnCardFlipped -= GameManager.instance.HandleCardFlipped;
+
                 Destroy(child.gameObject);
+            }
+
 
             int totalChildren = rows * columns;
 
-            if (totalChildren > 64)
+            if (totalChildren > 64 || totalChildren % 2 != 0)
             {
-                Debug.LogError("Grid must have an even number of cells for proper pairs!");
-                errorText.text = "Enter value not greater than 8X8=64 items";
+                Debug.LogError("Grid must have an even number of cells (max 64)!");
+                errorText.text = "Max grid size = 8x8 (64), must be even.";
                 return;
             }
 
             List<Sprite> availableSprites = new List<Sprite>(GameManager.instance._allCardsSprite);
 
-            // Create a pool of pairs
-            List<Sprite> changesprites = new List<Sprite>();
+            // Create pairs
+            List<Sprite> changeSprites = new List<Sprite>();
             for (int i = 0; i < totalChildren / 2; i++)
             {
-                // Pick a random sprite
-                int random = UnityEngine.Random.Range(0, availableSprites.Count);
+                int random = Random.Range(0, availableSprites.Count);
                 Sprite chosen = availableSprites[random];
 
-                // Add it twice (for the pair)
-                changesprites.Add(chosen);
-                changesprites.Add(chosen);
+                changeSprites.Add(chosen);
+                changeSprites.Add(chosen);
 
-
-                availableSprites.RemoveAt(random); // Remove from available list so no duplicate pairs of the same sprite
+                availableSprites.RemoveAt(random);
             }
 
-            // Shuffle the list so pairs are randomly distributed
-            for (int i = 0; i < changesprites.Count; i++)
+            // Shuffle
+            for (int i = 0; i < changeSprites.Count; i++)
             {
-                Sprite temp = changesprites[i];
-                int randomIndex = UnityEngine.Random.Range(0, changesprites.Count);
-                changesprites[i] = changesprites[randomIndex];
-                changesprites[randomIndex] = temp;
+                Sprite temp = changeSprites[i];
+                int randomIndex = Random.Range(0, changeSprites.Count);
+                changeSprites[i] = changeSprites[randomIndex];
+                changeSprites[randomIndex] = temp;
             }
 
-            Debug.Log($"Generating Grid: {columns}x{rows} = {totalChildren} cells");
+            Debug.Log($"Generating Grid: {columns}x{rows} = {totalChildren} cards");
 
-            if (totalChildren <= 64)
+            float totalWidth = container.rect.width;
+            float totalHeight = container.rect.height;
+
+            float cellWidth = (totalWidth - (columns - 1) * spacing.x) / columns;
+            float cellHeight = (totalHeight - (rows - 1) * spacing.y) / rows;
+            float cellSize = Mathf.Min(cellWidth, cellHeight);
+
+            Vector2 squareCellSize = new Vector2(cellSize, cellSize);
+
+            float gridWidth = columns * squareCellSize.x + (columns - 1) * spacing.x;
+            float gridHeight = rows * squareCellSize.y + (rows - 1) * spacing.y;
+
+            Vector2 gridOrigin = new Vector2(-gridWidth / 2f, gridHeight / 2f);
+
+            int index = 0;
+            for (int row = 0; row < rows; row++)
             {
-                float totalWidth = container.rect.width;
-                float totalHeight = container.rect.height;
-
-                float cellWidth = (totalWidth - (columns - 1) * spacing.x) / columns;
-                float cellHeight = (totalHeight - (rows - 1) * spacing.y) / rows;
-
-                float cellSize = Mathf.Min(cellWidth, cellHeight);
-                Vector2 squareCellSize = new Vector2(cellSize, cellSize);
-
-                float gridWidth = columns * squareCellSize.x + (columns - 1) * spacing.x;
-                float gridHeight = rows * squareCellSize.y + (rows - 1) * spacing.y;
-
-                Vector2 gridOrigin = new Vector2(-gridWidth / 2f, gridHeight / 2f);
-
-                int index = 0;
-                for (int row = 0; row < rows; row++)
+                for (int col = 0; col < columns; col++)
                 {
-                    for (int col = 0; col < columns; col++)
-                    {
-                        GameObject cell = Instantiate(cardPrefab, container, false);
-                        RectTransform rect = cell.GetComponent<RectTransform>();
-                        CardScript card = cell.GetComponent<CardScript>();
+                    GameObject cell = Instantiate(cardPrefab, container, false);
+                    RectTransform rect = cell.GetComponent<RectTransform>();
+                    CardScript card = cell.GetComponent<CardScript>();
 
-                        // Assign random shuffled sprite
-                        card.id = changesprites[index].name;
-                        card.name = changesprites[index].name;
-                        card.iconSprite.sprite = changesprites[index];
-                        GameManager.instance._allCards.Add(card);
-                        //SoundManager.instance.PlayPlace();
-                        // Subscribe to the event here
-                        card.OnCardFlipped += GameManager.instance.HandleCardFlipped;
-                        index++;
+                    // Assign sprite
+                    card.id = changeSprites[index].name;
+                    card.name = changeSprites[index].name;
+                    card.iconSprite.sprite = changeSprites[index];
 
-                        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
+                    // Add to GameManager
+                    GameManager.instance._allCards.Add(card);
 
-                        Vector2 targetPos = new Vector2(
-                            gridOrigin.x + col * (squareCellSize.x + spacing.x) + squareCellSize.x / 2f,
-                            gridOrigin.y - row * (squareCellSize.y + spacing.y) - squareCellSize.y / 2f
-                        );
+                    // Subscribe to GameManager
+                    card.OnCardFlipped += GameManager.instance.HandleCardFlipped;
+                    index++;
 
-                        rect.anchoredPosition = Vector2.zero;
-                        rect.sizeDelta = squareCellSize;
-                        cell.name = $"Cell_{row}_{col}";
+                    rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0.5f);
 
-                        // Animate using coroutine
-                        StartCoroutine(AnimateToPosition(rect, targetPos, animDuration, (row * columns + col) * 0.02f));
-                    }
+                    Vector2 targetPos = new Vector2(
+                        gridOrigin.x + col * (squareCellSize.x + spacing.x) + squareCellSize.x / 2f,
+                        gridOrigin.y - row * (squareCellSize.y + spacing.y) - squareCellSize.y / 2f
+                    );
+
+                    rect.anchoredPosition = Vector2.zero;
+                    rect.sizeDelta = squareCellSize;
+                    cell.name = $"Card_{row}_{col}";
+
+                    // Animate placement of cards
+                    StartCoroutine(AnimateToPosition(rect, targetPos, animDuration, (row * columns + col) * 0.02f));
                 }
             }
-            else
-            {
-                Debug.Log("Too many cells! Limit is 64.");
-            }
         }
-
 
         IEnumerator AnimateToPosition(RectTransform rect, Vector2 targetPos, float duration, float delay)
         {

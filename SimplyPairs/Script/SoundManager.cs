@@ -11,7 +11,7 @@ namespace SimplyPairs
 
         [Header("Clips")]
         public AudioClip flipClip;
-        public AudioClip placeClip;
+        public AudioClip clickClip;
         public AudioClip matchClip;
         public AudioClip mismatchClip;
         public AudioClip gameOverClip;
@@ -21,9 +21,9 @@ namespace SimplyPairs
             instance = this;
         }
 
-        public void PlayPlace()
+        public void PlayClick()
         {
-            PlayClip(placeClip);
+            PlayClip(clickClip);
         }
 
         public void PlayFlip()

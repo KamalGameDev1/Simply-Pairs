@@ -18,7 +18,9 @@ namespace SimplyPairs
         private Coroutine processCoroutine;
 
         [Header("Mismatch Settings")]
-        public float mismatchDelay = 0.5f; // delay before flip back
+        public float mismatchDelay = 0.15f; 
+
+        private bool isCheckingPair = false; 
 
         private void Awake()
         {
@@ -36,10 +38,8 @@ namespace SimplyPairs
         #region Card Handler
         public void HandleCardFlipped(CardScript card)
         {
-            Debug.Log("card:" + card.name);
-
-            if (card == null) return;
-            if (card.IsMatched) return;
+            if (isCheckingPair) return; 
+            if (card == null || card.IsMatched) return;
             if (flipQueue.Contains(card)) return;
 
             flipQueue.Enqueue(card);
@@ -70,43 +70,57 @@ namespace SimplyPairs
 
         private IEnumerator CheckPair(CardScript card1, CardScript card2)
         {
+            isCheckingPair = true;
+
             if (card1.id == card2.id)
             {
                 Debug.Log($"Matched Pair: {card1.id}");
                 card1.SetMatched();
                 card2.SetMatched();
 
-                //Scoring for match
-                ScoreManager.instance.OnMatch();
                
+                ScoreManager.instance?.OnMatch();
+                SoundManager.instance?.PlayMatch();
 
-                // Check win condition
+               
                 if (_allCards.TrueForAll(c => c.IsMatched))
                 {
                     Debug.Log("All matched ~ You Win!");
-                    ScoreManager.instance.winText.text = "All matched ~ You Win";
-                    SoundManager.instance.PlayGameOver();
+
+                    ScoreManager.instance?.OnWin();  // handles panel + saving
+
+                    SoundManager.instance?.PlayGameOver();
                 }
             }
             else
             {
                 Debug.Log($"Mismatched: {card1.id} vs {card2.id}");
 
-                // Penalty for mismatch
-                ScoreManager.instance.OnMismatch();
-                SoundManager.instance.PlayMismatch();
+                //Penalty for mismatch
+                ScoreManager.instance?.OnMismatch();
+                SoundManager.instance?.PlayMismatch();
 
                 if (mismatchDelay > 0f)
                     yield return new WaitForSeconds(mismatchDelay);
 
-                Coroutine flip1 = StartCoroutine(card1.FlipBack());
-                Coroutine flip2 = StartCoroutine(card2.FlipBack());
-
-                yield return flip1;
-                yield return flip2;
+                yield return StartCoroutine(card1.FlipBack());
+                yield return StartCoroutine(card2.FlipBack());
             }
+
+            isCheckingPair = false;
         }
         #endregion
+
+        public void ClearAllCardListner()
+        {
+            foreach (var card in _allCards)
+            {
+                if (card != null)
+                    card.OnCardFlipped -= HandleCardFlipped;
+            }
+            _allCards.Clear();
+
+        }
 
         public void ExitApplication()
         {

@@ -15,7 +15,7 @@ namespace SimplyPairs
 
         [Header("Flip Data")]
         public float flipDuration = 0.25f;
-        public float flipBackDuration = 0.15f; 
+        public float flipBackDuration = 0.5f; 
 
         [Header("BoolState")]
         public bool IsFlipped;
@@ -45,6 +45,11 @@ namespace SimplyPairs
 
             StartCoroutine(FlipToFace());
         }
+        private void OnDestroy()
+        {
+            OnCardFlipped = null; // clears all listeners
+        }
+
 
         private IEnumerator FlipToFace()
         {
