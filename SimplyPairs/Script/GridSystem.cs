@@ -38,7 +38,6 @@ namespace SimplyPairs
             if (hardButton != null) hardButton.onClick.AddListener(HardLevel);
             if (customButton != null) customButton.onClick.AddListener(CustomLevel);
 
-            // Load last played level if available
             var (savedRows, savedCols) = SaveLoadManager.instance.LoadLastLevel();
             if (savedRows > 0 && savedCols > 0)
             {
@@ -48,32 +47,13 @@ namespace SimplyPairs
             }
             else
             {
-                // show menu instead of auto-generate
                 levelsPanel.SetActive(true);
             }
-
         }
 
-        void EasyLevel()
-        {
-            rows = 2;
-            columns = 6;
-            GenerateGrid();
-        }
-
-        void DifficultLevel()
-        {
-            rows = 5;
-            columns = 6;
-            GenerateGrid();
-        }
-
-        void HardLevel()
-        {
-            rows = 5;
-            columns = 10;
-            GenerateGrid();
-        }
+        void EasyLevel() { rows = 2; columns = 6; GenerateGrid(); }
+        void DifficultLevel() { rows = 5; columns = 6; GenerateGrid(); }
+        void HardLevel() { rows = 5; columns = 10; GenerateGrid(); }
 
         void CustomLevel()
         {
@@ -92,6 +72,12 @@ namespace SimplyPairs
 
         public void Restart()
         {
+            if (GameManager.instance != null)
+            {
+                GameManager.instance.ClearAllCardListner();
+                GameManager.instance.ResetGame();
+            }
+
             GenerateGrid();
         }
 
@@ -100,50 +86,40 @@ namespace SimplyPairs
             levelsPanel.SetActive(false);
             gamePlayPanel.SetActive(true);
 
-            GameManager.instance._allCards.Clear();
+            if (GameManager.instance != null)
+            {
+                GameManager.instance.ClearAllCardListner();
+                GameManager.instance.ResetGame();
+            }
 
-          
             ScoreManager.instance?.ResetScore();
-
-           
             SaveLoadManager.instance?.SaveLastLevel(rows, columns);
 
-            // Destroy old children
             foreach (Transform child in container)
             {
-                CardScript card = child.GetComponent<CardScript>();
-                if (card != null)
-                    card.OnCardFlipped -= GameManager.instance.HandleCardFlipped;
-
                 Destroy(child.gameObject);
             }
 
-
             int totalChildren = rows * columns;
-
             if (totalChildren > 64 || totalChildren % 2 != 0)
             {
-                Debug.LogError("Grid must have an even number of cells (max 64)!");
                 errorText.text = "Max grid size = 8x8 (64), must be even.";
                 return;
             }
 
             List<Sprite> availableSprites = new List<Sprite>(GameManager.instance._allCardsSprite);
 
-            // Create pairs
             List<Sprite> changeSprites = new List<Sprite>();
             for (int i = 0; i < totalChildren / 2; i++)
             {
                 int random = Random.Range(0, availableSprites.Count);
                 Sprite chosen = availableSprites[random];
-
                 changeSprites.Add(chosen);
                 changeSprites.Add(chosen);
-
                 availableSprites.RemoveAt(random);
             }
 
-            // Shuffle
+            // shuffle
             for (int i = 0; i < changeSprites.Count; i++)
             {
                 Sprite temp = changeSprites[i];
@@ -152,20 +128,16 @@ namespace SimplyPairs
                 changeSprites[randomIndex] = temp;
             }
 
-            Debug.Log($"Generating Grid: {columns}x{rows} = {totalChildren} cards");
-
             float totalWidth = container.rect.width;
             float totalHeight = container.rect.height;
 
             float cellWidth = (totalWidth - (columns - 1) * spacing.x) / columns;
             float cellHeight = (totalHeight - (rows - 1) * spacing.y) / rows;
             float cellSize = Mathf.Min(cellWidth, cellHeight);
-
             Vector2 squareCellSize = new Vector2(cellSize, cellSize);
 
             float gridWidth = columns * squareCellSize.x + (columns - 1) * spacing.x;
             float gridHeight = rows * squareCellSize.y + (rows - 1) * spacing.y;
-
             Vector2 gridOrigin = new Vector2(-gridWidth / 2f, gridHeight / 2f);
 
             int index = 0;
@@ -175,17 +147,15 @@ namespace SimplyPairs
                 {
                     GameObject cell = Instantiate(cardPrefab, container, false);
                     RectTransform rect = cell.GetComponent<RectTransform>();
+
                     CardScript card = cell.GetComponent<CardScript>();
+                    card.ResetCard(); // ensure clean state
 
-                    // Assign sprite
                     card.id = changeSprites[index].name;
-                    card.name = changeSprites[index].name;
                     card.iconSprite.sprite = changeSprites[index];
+                    card.name = changeSprites[index].name;
 
-                    // Add to GameManager
                     GameManager.instance._allCards.Add(card);
-
-                    // Subscribe to GameManager
                     card.OnCardFlipped += GameManager.instance.HandleCardFlipped;
                     index++;
 
@@ -200,7 +170,6 @@ namespace SimplyPairs
                     rect.sizeDelta = squareCellSize;
                     cell.name = $"Card_{row}_{col}";
 
-                    // Animate placement of cards
                     StartCoroutine(AnimateToPosition(rect, targetPos, animDuration, (row * columns + col) * 0.02f));
                 }
             }

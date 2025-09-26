@@ -10,12 +10,12 @@ namespace SimplyPairs
     {
         [Header("Card Data")]
         public string id;
-        public Image backSprite;   
-        public Image iconSprite;   
+        public Image backSprite;
+        public Image iconSprite;
 
         [Header("Flip Data")]
-        public float flipDuration = 0.25f;
-        public float flipBackDuration = 0.5f; 
+        public float flipDuration = 0.15f;    // faster flip
+        public float flipBackDuration = 0.1f; // faster backflip
 
         [Header("BoolState")]
         public bool IsFlipped;
@@ -37,24 +37,20 @@ namespace SimplyPairs
             backSprite.gameObject.SetActive(true);
             iconSprite.gameObject.SetActive(false);
             transform.localScale = Vector3.one;
+            gameObject.SetActive(true);
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            if (GameManager.instance != null && GameManager.instance.IsLocked) return;
             if (IsMatched || IsFlipped || isAnimating) return;
-
             StartCoroutine(FlipToFace());
         }
-        private void OnDestroy()
-        {
-            OnCardFlipped = null; // clears all listeners
-        }
-
 
         private IEnumerator FlipToFace()
         {
+            if (isAnimating) yield break;
             isAnimating = true;
-            IsFlipped = true;
 
             float half = flipDuration / 2f;
 
@@ -78,16 +74,16 @@ namespace SimplyPairs
             }
 
             transform.localScale = Vector3.one;
+            IsFlipped = true;
             isAnimating = false;
 
-            //notify AFTER flip is complete
             OnCardFlipped?.Invoke(this);
-            SoundManager.instance.PlayFlip();
+            SoundManager.instance?.PlayFlip();
         }
 
         public IEnumerator FlipBack()
         {
-            if (isAnimating) yield break; 
+            while (isAnimating) yield return null;
             isAnimating = true;
 
             float half = flipBackDuration / 2f;
@@ -114,8 +110,8 @@ namespace SimplyPairs
             IsFlipped = false;
             transform.localScale = Vector3.one;
             isAnimating = false;
-            SoundManager.instance.PlayFlip();
 
+            SoundManager.instance?.PlayFlip();
         }
 
         public void SetMatched()
@@ -149,8 +145,7 @@ namespace SimplyPairs
 
             transform.localScale = original;
             yield return new WaitForEndOfFrame();
-            transform.gameObject.SetActive(false);
-            
+            gameObject.SetActive(false);
         }
     }
 }

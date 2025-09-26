@@ -178,7 +178,7 @@ MonoBehaviour:
   comboText: {fileID: 1196261728}
   turnText: {fileID: 121650356}
   mismatchText: {fileID: 388894573}
-  winnerPanel: {fileID: 0}
+  winnerPanel: {fileID: 1430477509}
   winText: {fileID: 172227427}
   highScoreText: {fileID: 1181232856}
   bestTurnsText: {fileID: 1787233769}
@@ -1182,6 +1182,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 8408bb7f2d7302d4d9e0f11226d18c8f, type: 3}
   _allCards: []
   mismatchDelay: 1
+  IsLocked: 0
 --- !u!1 &490665808
 GameObject:
   m_ObjectHideFlags: 0
@@ -1200,7 +1201,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &490665809
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4091,10 +4092,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
-      - m_Target: {fileID: 459166703}
-        m_TargetAssemblyTypeName: SimplyPairs.GameManager, Assembly-CSharp
-        m_MethodName: ClearAllCardListner
-        m_Mode: 1
+      - m_Target: {fileID: 1894408101}
+        m_TargetAssemblyTypeName: UnityEngine.GameObject, UnityEngine
+        m_MethodName: SetActive
+        m_Mode: 6
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine

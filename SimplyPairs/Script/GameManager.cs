@@ -18,12 +18,18 @@ namespace SimplyPairs
         private Coroutine processCoroutine;
 
         [Header("Mismatch Settings")]
-        public float mismatchDelay = 0.15f; 
+        public float mismatchDelay = 0.15f;
 
-        private bool isCheckingPair = false; 
+        [Header("Lock System")]
+        public bool IsLocked;
 
         private void Awake()
         {
+            if (instance != null && instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
             instance = this;
         }
 
@@ -38,18 +44,19 @@ namespace SimplyPairs
         #region Card Handler
         public void HandleCardFlipped(CardScript card)
         {
-            if (isCheckingPair) return; 
+            if (IsLocked) return;
             if (card == null || card.IsMatched) return;
             if (flipQueue.Contains(card)) return;
 
             flipQueue.Enqueue(card);
 
-            // Add turn every time player flips 2 cards
-            if (flipQueue.Count % 2 == 0)
+            if (flipQueue.Count == 2)
+            {
                 ScoreManager.instance?.AddTurn();
 
-            if (processCoroutine == null)
-                processCoroutine = StartCoroutine(ProcessQueue());
+                if (processCoroutine == null)
+                    processCoroutine = StartCoroutine(ProcessQueue());
+            }
         }
 
         private IEnumerator ProcessQueue()
@@ -62,7 +69,7 @@ namespace SimplyPairs
                 if (c1 == null || c2 == null) continue;
                 if (c1.IsMatched || c2.IsMatched) continue;
 
-                yield return StartCoroutine(CheckPair(c1, c2));
+                yield return CheckPair(c1, c2);
             }
 
             processCoroutine = null;
@@ -70,44 +77,37 @@ namespace SimplyPairs
 
         private IEnumerator CheckPair(CardScript card1, CardScript card2)
         {
-            isCheckingPair = true;
+            IsLocked = true;
 
             if (card1.id == card2.id)
             {
-                Debug.Log($"Matched Pair: {card1.id}");
                 card1.SetMatched();
                 card2.SetMatched();
 
-               
                 ScoreManager.instance?.OnMatch();
                 SoundManager.instance?.PlayMatch();
 
-               
-                if (_allCards.TrueForAll(c => c.IsMatched))
+                if (_allCards.Count > 0 && _allCards.TrueForAll(c => c != null && c.IsMatched))
                 {
-                    Debug.Log("All matched ~ You Win!");
-
-                    ScoreManager.instance?.OnWin();  // handles panel + saving
-
+                    ScoreManager.instance?.OnWin();
                     SoundManager.instance?.PlayGameOver();
                 }
             }
             else
             {
-                Debug.Log($"Mismatched: {card1.id} vs {card2.id}");
-
-                //Penalty for mismatch
                 ScoreManager.instance?.OnMismatch();
                 SoundManager.instance?.PlayMismatch();
 
                 if (mismatchDelay > 0f)
                     yield return new WaitForSeconds(mismatchDelay);
 
-                yield return StartCoroutine(card1.FlipBack());
-                yield return StartCoroutine(card2.FlipBack());
+                Coroutine c1 = StartCoroutine(card1.FlipBack());
+                Coroutine c2 = StartCoroutine(card2.FlipBack());
+                yield return c1;
+                yield return c2;
             }
 
-            isCheckingPair = false;
+            IsLocked = false;
         }
         #endregion
 
@@ -119,7 +119,23 @@ namespace SimplyPairs
                     card.OnCardFlipped -= HandleCardFlipped;
             }
             _allCards.Clear();
+        }
 
+        public void ResetGame()
+        {
+            IsLocked = false;
+            flipQueue.Clear();
+
+            if (processCoroutine != null)
+            {
+                StopCoroutine(processCoroutine);
+                processCoroutine = null;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            ClearAllCardListner();
         }
 
         public void ExitApplication()
