@@ -72,13 +72,13 @@ namespace SimplyPairs
 
         public void Restart()
         {
-            if (GameManager.instance != null)
+            var (savedRows, savedCols) = SaveLoadManager.instance.LoadLastLevel();
+            if (savedRows > 0 && savedCols > 0)
             {
-                GameManager.instance.ClearAllCardListner();
-                GameManager.instance.ResetGame();
+                rows = savedRows;
+                columns = savedCols;
+                GenerateGrid();
             }
-
-            GenerateGrid();
         }
 
         void GenerateGrid()
@@ -156,6 +156,7 @@ namespace SimplyPairs
                     card.name = changeSprites[index].name;
 
                     GameManager.instance._allCards.Add(card);
+                    Debug.Log("Card Count:"+GameManager.instance._allCards.Count);
                     card.OnCardFlipped += GameManager.instance.HandleCardFlipped;
                     index++;
 

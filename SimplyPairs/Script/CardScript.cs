@@ -42,6 +42,8 @@ namespace SimplyPairs
 
         public void OnPointerClick(PointerEventData eventData)
         {
+            Debug.Log($"IsMatched:{IsMatched}+IsFlipped:{IsFlipped}+isAnimating:{isAnimating}" +
+                $"+IsLocked:{GameManager.instance.IsLocked}");
             if (GameManager.instance != null && GameManager.instance.IsLocked) return;
             if (IsMatched || IsFlipped || isAnimating) return;
             StartCoroutine(FlipToFace());

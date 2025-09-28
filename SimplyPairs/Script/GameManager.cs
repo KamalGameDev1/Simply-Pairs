@@ -18,7 +18,7 @@ namespace SimplyPairs
         private Coroutine processCoroutine;
 
         [Header("Mismatch Settings")]
-        public float mismatchDelay = 0.15f;
+        public float mismatchDelay = 0.1f;
 
         [Header("Lock System")]
         public bool IsLocked;
@@ -97,16 +97,14 @@ namespace SimplyPairs
             {
                 ScoreManager.instance?.OnMismatch();
                 SoundManager.instance?.PlayMismatch();
-
-                if (mismatchDelay > 0f)
-                    yield return new WaitForSeconds(mismatchDelay);
-
+                yield return new WaitForSeconds(mismatchDelay);
                 Coroutine c1 = StartCoroutine(card1.FlipBack());
                 Coroutine c2 = StartCoroutine(card2.FlipBack());
                 yield return c1;
                 yield return c2;
             }
 
+            yield return new WaitForSeconds(0.5f);
             IsLocked = false;
         }
         #endregion
@@ -135,7 +133,7 @@ namespace SimplyPairs
 
         private void OnDestroy()
         {
-            ClearAllCardListner();
+            //ClearAllCardListner();
         }
 
         public void ExitApplication()
